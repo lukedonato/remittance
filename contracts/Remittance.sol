@@ -11,11 +11,16 @@ contract Remittance is Pausable {
     event LogDeposit(address owner, uint value);
     event LogWithdrawal(address withrawer, uint value);
 
+    // offchain
+    function generateHashedCombo(
+        bytes32 carolsPassword,
+        bytes32 bobsPassword,
+        address withdrawerAddress
+    ) public pure returns (bytes32 hashedCombo) {
+         hashedCombo = keccak256(abi.encodePacked(carolsPassword, bobsPassword, withdrawerAddress));
+    }
+
     function depositFunds(bytes32 hashedCombo) payable external returns (bool) {
-        /* 
-            hashedCombo is the keccak256 hash of carol's password + bob's password + carol's address
-            calculated offchain
-        */ 
         require(hashedCombo > 0);
         balances[hashedCombo] = balances[hashedCombo].add(msg.value);
 
