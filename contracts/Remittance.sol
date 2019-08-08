@@ -6,22 +6,30 @@ import "./Pausable.sol";
 contract Remittance is Pausable {
     using SafeMath for uint;
 
+    uint public constant defaultExpiration = 7 days;
+    
     struct RemittanceStruct {
         uint balance;
-        address recipient;
+        address originalSender;
+        uint expiration;
     }
 
     mapping (bytes32 => RemittanceStruct) remittances;
 
     event LogDeposit(address owner, uint value, bytes32 hashedCombo);
     event LogWithdrawal(address withrawer, uint value);
+    event LogRefunded(address indexed originalSender, uint refundAmount);
 
-    function depositFunds(bytes32 hashedCombo, address withdrawerAddress) payable external returns (bool) {
+    function depositFunds(bytes32 hashedCombo, uint expiration) payable external returns (bool) {
         require(hashedCombo > 0);
+        require(msg.value > 0);
+        require(expiration <= defaultExpiration);
         RemittanceStruct storage r = remittances[hashedCombo];
-        require(r.recipient == address(0), "Sorry. Taken.");
-        r.recipient = withdrawerAddress;
-        r.balance = r.balance.add(msg.value);
+        require(r.balance == 0, "Sorry. Taken.");
+
+        r.balance = msg.value;
+        r.originalSender = msg.sender;
+        r.expiration = expiration;
 
         emit LogDeposit(msg.sender, msg.value, hashedCombo);
         return true;
@@ -36,16 +44,31 @@ contract Remittance is Pausable {
     }
 
     function withdrawFunds(bytes32 bobsPassword) external returns (bool) {
-        bytes32 hashedCombo = keccak256(abi.encodePacked(bobsPassword, msg.sender, address(this)));
+        bytes32 hashedCombo = this.generateHashedCombo(bobsPassword, msg.sender);
         RemittanceStruct storage r = remittances[hashedCombo];
-        
-        require(r.recipient == msg.sender, "This is not for you.");
+
         uint secretBalance = r.balance;
         require(secretBalance > 0);
         r.balance = 0;
+        r.expiration = 0;
 
-        msg.sender.transfer(secretBalance);
         emit LogWithdrawal(msg.sender, secretBalance);
+        msg.sender.transfer(secretBalance);
+        
         return true;
+    }
+
+    function refundFunds(bytes32 hashedCombo) external {
+        require(msg.sender == remittances[hashedCombo].originalSender);
+        require(remittances[hashedCombo].expiration <= now);
+
+        uint refundAmount = remittances[hashedCombo].balance;
+        require(refundAmount > 0);
+
+        remittances[hashedCombo].balance = 0;
+        remittances[hashedCombo].expiration = 0;
+
+        emit LogRefunded(msg.sender, refundAmount);
+        msg.sender.transfer(refundAmount);
     }
 }
