@@ -6,7 +6,7 @@ import "./Pausable.sol";
 contract Remittance is Pausable {
     using SafeMath for uint;
 
-    uint public constant defaultExpiration = 7 days;
+    uint public constant maxExpiration = 7 days;
     
     struct RemittanceStruct {
         uint balance;
@@ -14,7 +14,7 @@ contract Remittance is Pausable {
         uint expiration;
     }
 
-    mapping (bytes32 => RemittanceStruct) remittances;
+    mapping (bytes32 => RemittanceStruct) public remittances;
 
     event LogDeposit(address owner, uint value, bytes32 hashedCombo);
     event LogWithdrawal(address withrawer, uint value);
@@ -23,13 +23,14 @@ contract Remittance is Pausable {
     function depositFunds(bytes32 hashedCombo, uint expiration) payable external returns (bool) {
         require(hashedCombo > 0);
         require(msg.value > 0);
-        require(expiration <= defaultExpiration);
+        require(expiration <= maxExpiration);
+        
         RemittanceStruct storage r = remittances[hashedCombo];
         require(r.balance == 0, "Sorry. Taken.");
 
         r.balance = msg.value;
         r.originalSender = msg.sender;
-        r.expiration = expiration;
+        r.expiration = now.add(expiration);
 
         emit LogDeposit(msg.sender, msg.value, hashedCombo);
         return true;
@@ -44,13 +45,14 @@ contract Remittance is Pausable {
     }
 
     function withdrawFunds(bytes32 bobsPassword) external returns (bool) {
-        bytes32 hashedCombo = this.generateHashedCombo(bobsPassword, msg.sender);
+        bytes32 hashedCombo = generateHashedCombo(bobsPassword, msg.sender);
         RemittanceStruct storage r = remittances[hashedCombo];
 
         uint secretBalance = r.balance;
         require(secretBalance > 0);
         r.balance = 0;
         r.expiration = 0;
+        r.originalSender = address(0);
 
         emit LogWithdrawal(msg.sender, secretBalance);
         msg.sender.transfer(secretBalance);
