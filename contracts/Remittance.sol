@@ -69,6 +69,7 @@ contract Remittance is Pausable {
 
         remittances[hashedCombo].balance = 0;
         remittances[hashedCombo].expiration = 0;
+        remittances[hashedCombo].originalSender = address(0);
 
         emit LogRefunded(msg.sender, refundAmount);
         msg.sender.transfer(refundAmount);
