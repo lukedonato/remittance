@@ -6,7 +6,7 @@ contract('Remittance', accounts => {
     const [alice, carol, randomAddress] = accounts;
     let remittanceInstance, hashedCombo, txObj;
 
-    beforeEach(async () => {
+    beforeEach("create new instance", async () => {
         remittanceInstance = await Remittance.new({ from: alice });
         hashedCombo = await remittance.generateHashedCombo(toHex("password"), carol);
         txObj = await remittanceInstance.deposit(hashedCombo, 172800, { from: alice, value: 10 });
@@ -19,6 +19,9 @@ contract('Remittance', accounts => {
         assert.strictEqual(remittance.originalSender, alice);
         assert.strictEqual(remittance.expiration.toString(10), "172800");
         assert.strictEqual(log.event, "LogDeposit");
+        assert.strictEqual(log.args[0], alice);
+        assert.strictEqual(log.args[0], "10");
+        assert.strictEqual(log.args[0], hashedCombo);
     });
 
     it('withdrawFunds', async () => {
@@ -37,8 +40,9 @@ contract('Remittance', accounts => {
             assert.strictEqual(remittance.amount.toString(10), "0");
             assert.strictEqual(balanceNow.toString(10), balanceBefore.plus(10).minus(txFee).toString(10), "wrong balance");
             assert.strictEqual(log.event, "LogWithdrawal");
-
-
+            assert.strictEqual(log.args[0], carol);
+            assert.strictEqual(log.args[0], "10");
+            assert.strictEqual(log.args[0], hashedCombo);
         }
     });
 

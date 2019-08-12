@@ -16,12 +16,12 @@ contract Remittance is Pausable {
 
     mapping (bytes32 => RemittanceStruct) public remittances;
 
-    event LogDeposit(address owner, uint value, bytes32 hashedCombo);
-    event LogWithdrawal(address withrawer, uint value);
-    event LogRefunded(address indexed originalSender, uint refundAmount);
+    event LogDeposit(address indexed owner, uint value, bytes32 indexed hashedCombo);
+    event LogWithdrawal(address indexed withrawer, uint value, bytes32 indexed hashedCombo);
+    event LogRefunded(address indexed originalSender, uint refundAmount, bytes32 indexed hashedCombo);
 
     function depositFunds(bytes32 hashedCombo, uint expiration) payable external returns (bool) {
-        require(hashedCombo > 0);
+        require(hashedCombo != 0);
         require(msg.value > 0);
         require(expiration <= maxExpiration);
         
@@ -41,7 +41,8 @@ contract Remittance is Pausable {
         bytes32 bobsPassword,
         address withdrawerAddress
     ) public pure returns (bytes32 hashedCombo) {
-         hashedCombo = keccak256(abi.encodePacked(bobsPassword, withdrawerAddress, address(this)));
+        require(withdrawerAddress != address(0), 'must supply valid withdrawerAddress');
+        hashedCombo = keccak256(abi.encodePacked(bobsPassword, withdrawerAddress, address(this)));
     }
 
     function withdrawFunds(bytes32 bobsPassword) external returns (bool) {
@@ -54,13 +55,13 @@ contract Remittance is Pausable {
         r.expiration = 0;
         r.originalSender = address(0);
 
-        emit LogWithdrawal(msg.sender, secretBalance);
+        emit LogWithdrawal(msg.sender, secretBalance, hashedCombo);
         msg.sender.transfer(secretBalance);
         
         return true;
     }
 
-    function refundFunds(bytes32 hashedCombo) external {
+    function refundFunds(bytes32 hashedCombo) external  returns (bool) {
         require(msg.sender == remittances[hashedCombo].originalSender);
         require(remittances[hashedCombo].expiration <= now);
 
@@ -71,7 +72,9 @@ contract Remittance is Pausable {
         remittances[hashedCombo].expiration = 0;
         remittances[hashedCombo].originalSender = address(0);
 
-        emit LogRefunded(msg.sender, refundAmount);
+        emit LogRefunded(msg.sender, refundAmount, hashedCombo);
         msg.sender.transfer(refundAmount);
+
+        return true;
     }
 }
