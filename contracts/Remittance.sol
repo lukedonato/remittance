@@ -20,7 +20,7 @@ contract Remittance is Pausable {
     event LogWithdrawal(address indexed withrawer, uint value, bytes32 indexed hashedCombo);
     event LogRefunded(address indexed originalSender, uint refundAmount, bytes32 indexed hashedCombo);
 
-    function depositFunds(bytes32 hashedCombo, uint expiration) payable external returns (bool) {
+    function depositFunds(bytes32 hashedCombo, uint expiration) whenNotPaused payable external returns (bool) {
         require(hashedCombo != 0);
         require(msg.value > 0);
         require(expiration <= maxExpiration);
