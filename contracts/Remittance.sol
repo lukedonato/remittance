@@ -26,7 +26,7 @@ contract Remittance is Pausable {
         require(expiration <= maxExpiration);
         
         RemittanceStruct storage r = remittances[hashedCombo];
-        require(r.balance == 0, "Sorry. Taken.");
+        require(r.originalSender == address(0), "hashedCombo already used");
 
         r.balance = msg.value;
         r.originalSender = msg.sender;
@@ -53,7 +53,6 @@ contract Remittance is Pausable {
         require(secretBalance > 0);
         r.balance = 0;
         r.expiration = 0;
-        r.originalSender = address(0);
 
         emit LogWithdrawal(msg.sender, secretBalance, hashedCombo);
         msg.sender.transfer(secretBalance);
@@ -70,7 +69,6 @@ contract Remittance is Pausable {
 
         remittances[hashedCombo].balance = 0;
         remittances[hashedCombo].expiration = 0;
-        remittances[hashedCombo].originalSender = address(0);
 
         emit LogRefunded(msg.sender, refundAmount, hashedCombo);
         msg.sender.transfer(refundAmount);
