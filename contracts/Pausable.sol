@@ -55,7 +55,7 @@ contract Pausable is PauserRole {
         _;
     }
 
-    modifier whenNotKilled() {
+    modifier whenAlive() {
         require(!_killed, "Killable: killed");
         _;
     }
@@ -81,7 +81,7 @@ contract Pausable is PauserRole {
         emit Paused(msg.sender);
     }
 
-    function kill() public onlyKiller whenNotKilled {
+    function kill() public onlyKiller whenPaused whenAlive {
         _killed = true;
         emit Killed(msg.sender);
     }   
