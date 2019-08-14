@@ -16,13 +16,16 @@ contract Pausable is PauserRole {
      * @dev Emitted when the pause is triggered by a pauser (`account`).
      */
     event Paused(address account);
+    event Killed(address account);
 
     /**
      * @dev Emitted when the pause is lifted by a pauser (`account`).
      */
     event Unpaused(address account);
+    
 
     bool private _paused;
+    bool private _killed;
 
     /**
      * @dev Initializes the contract in unpaused state. Assigns the Pauser role
@@ -30,6 +33,7 @@ contract Pausable is PauserRole {
      */
     constructor () internal {
         _paused = false;
+        _killed = false;
     }
 
     /**
@@ -38,12 +42,21 @@ contract Pausable is PauserRole {
     function paused() public view returns (bool) {
         return _paused;
     }
+    
+    function killed() public view returns (bool) {
+        return _killed;
+    }
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
      */
     modifier whenNotPaused() {
         require(!_paused, "Pausable: paused");
+        _;
+    }
+
+    modifier whenNotKilled() {
+        require(!_killed, "Killable: killed");
         _;
     }
 
@@ -55,6 +68,11 @@ contract Pausable is PauserRole {
         _;
     }
 
+    modifier whenKilled() {
+        require(_killed, "Killable: not killed");
+        _;
+    }
+
     /**
      * @dev Called by a pauser to pause, triggers stopped state.
      */
@@ -62,6 +80,11 @@ contract Pausable is PauserRole {
         _paused = true;
         emit Paused(msg.sender);
     }
+
+    function kill() public onlyKiller whenNotKilled {
+        _killed = true;
+        emit Killed(msg.sender);
+    }   
 
     /**
      * @dev Called by a pauser to unpause, returns to normal state.
